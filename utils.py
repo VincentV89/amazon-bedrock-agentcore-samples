@@ -184,6 +184,107 @@ def create_agentcore_role(agent_name):
             }
         ]
     }
+    def create_agentcore_role(agent_name):
+    iam_client = boto3.client('iam')
+    agentcore_role_name = f'agentcore-{agent_name}-role'
+    boto_session = Session()
+    region = boto_session.region_name
+    account_id = boto3.client("sts").get_caller_identity()["Account"]
+    role_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "BedrockPermissions",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock:InvokeModel",
+                    "bedrock:InvokeModelWithResponseStream"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "ECRImageAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "ecr:BatchGetImage",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetAuthorizationToken"
+                ],
+                "Resource": [
+                    "*"
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "logs:DescribeLogStreams",
+                    "logs:CreateLogGroup"
+                ],
+                "Resource": [
+                    "*"
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "logs:DescribeLogGroups"
+                ],
+                "Resource": [
+                    "*"
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                "Resource": [
+                    "*"
+                ]
+            },
+            {
+                "Sid": "ECRTokenAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "ecr:GetAuthorizationToken"
+                ],
+                "Resource": "*"
+            },
+            {
+            "Effect": "Allow",
+            "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets"
+                ],
+             "Resource": [ "*" ]
+             },
+             {
+                "Effect": "Allow",
+                "Resource": "*",
+                "Action": "cloudwatch:PutMetricData",
+                "Condition": {
+                    "StringEquals": {
+                        "cloudwatch:namespace": "bedrock-agentcore"
+                    }
+                }
+            },
+            {
+                "Sid": "GetAgentAccessToken",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:GetWorkloadAccessToken",
+                    "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
+                    "bedrock-agentcore:GetWorkloadAccessTokenForUserId"
+                ],
+                "Resource": [
+                  "*"
+                ]
+            }
+        ]
+    }
     assume_role_policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -191,7 +292,7 @@ def create_agentcore_role(agent_name):
                 "Sid": "AssumeRolePolicy",
                 "Effect": "Allow",
                 "Principal": {
-                    "Service": "bedrock-agentcore.amazonaws.com"
+                    "Service": ["bedrock-agentcore.amazonaws.com","ec2.amazonaws.com"]
                 },
                 "Action": "sts:AssumeRole",
                 "Condition": {
@@ -209,7 +310,9 @@ def create_agentcore_role(agent_name):
     assume_role_policy_document_json = json.dumps(
         assume_role_policy_document
     )
-    role_policy_document = json.dumps(role_policy)
+    # role_policy_document = json.dumps(role_policy)
+    role_policy_document = json.dumps(role_policy, separators=(",", ":"))
+
     # Create IAM Role for the Lambda function
     try:
         agentcore_iam_role = iam_client.create_role(
