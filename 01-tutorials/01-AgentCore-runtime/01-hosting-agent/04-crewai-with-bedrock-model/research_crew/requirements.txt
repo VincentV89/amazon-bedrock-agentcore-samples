@@ -1,3 +1,0 @@
-crewai
-crewai-tools
-bedrock-agentcore
