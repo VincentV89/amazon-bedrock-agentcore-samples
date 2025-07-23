@@ -196,7 +196,7 @@ def create_agentcore_role(agent_name):
                         "aws:SourceAccount": f"{account_id}"
                     },
                     "ArnLike": {
-                        "aws:SourceArn": f"arn:aws:bedrock-agentcore:{region}:{account_id}:*"
+                        "aws:SourceArn": f"arn:aws:bedrock-agentcore:*:{account_id}:*"
                     }
                 }
             }
