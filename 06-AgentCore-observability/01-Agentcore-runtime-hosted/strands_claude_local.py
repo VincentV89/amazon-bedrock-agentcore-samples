@@ -11,7 +11,7 @@ def weather():
     return "sunny"
 
 
-model_id = "us.amazon.nova-lite-v1:0"
+model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 model = BedrockModel(
     model_id=model_id,
 )
