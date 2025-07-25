@@ -34,4 +34,4 @@ if __name__ == "__main__":
     parser.add_argument("payload", type=str)
     args = parser.parse_args()
     response = strands_agent_bedrock(json.loads(args.payload))
-    print(response)
+    # print(response)  # removed since response gets printed twice as Strands callback handler is active
