@@ -74,7 +74,7 @@ def create_memory_if_not_exists(memory_client: MemoryClient, name: str, descript
     """
     memories = list_memories(memory_client)
     if len(memories):
-        return memories[0]
+        return memories[0]  # For demo purposes, we assume that the only memory is the correct one.
 
     try:
         memory = memory_client.create_memory(
