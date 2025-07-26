@@ -72,6 +72,10 @@ def create_memory_if_not_exists(memory_client: MemoryClient, name: str, descript
     Returns:
         dict: Created memory object, None if creation fails
     """
+    memories = list_memories(memory_client)
+    if len(memories):
+        return memories[0]
+
     try:
         memory = memory_client.create_memory(
             name=name,
@@ -134,14 +138,6 @@ SAMPLE_CONVERSATION_HISTORY = [
     ("I'm sorry to hear that. Let me look up your order.", "ASSISTANT"),
     ("lookup_order(order_id='12345')", "TOOL"),
     ("I see your order was shipped 3 days ago. What specific issue are you experiencing?", "ASSISTANT"),
-    ("Actually, before that - I also want to change my email address", "USER"),
-    (
-        "Of course! I can help with both. Let's start with updating your email. What's your new email?",
-        "ASSISTANT",
-    ),
-    ("newemail@example.com", "USER"),
-    ("update_customer_email(old='old@example.com', new='newemail@example.com')", "TOOL"),
-    ("Email updated successfully! Now, about your order issue?", "ASSISTANT"),
     ("The package arrived damaged", "USER"),
 ]
 
