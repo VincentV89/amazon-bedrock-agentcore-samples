@@ -3,21 +3,13 @@
 """
 Memory Management System for Agent Conversations
 
-This module provides functionality for managing conversation memory in agent-based systems,
-particularly focused on customer support interactions. It includes:
+This module demonstrates basic memory management functionality using Amazon Bedrock AgentCore Memory.
+It provides examples of:
 
-- Memory initialization and management
-- Session handling and tracking
-- Conversation history storage and retrieval
-- Agent creation with memory persistence
-
-The system uses AWS Bedrock's MemoryClient for storing conversation data and supports
-features like:
-- Creating and checking memory collections
-- Generating unique session IDs
-- Loading recent conversation history
-- Storing new conversation messages
-- Managing memory across multiple sessions
+- Creating and listing memory collections
+- Creating conversation events with message history
+- Retrieving conversation events from memory
+- Managing customer support conversation scenarios
 
 Dependencies:
     - datetime
@@ -32,8 +24,6 @@ Example:
         name="CustomerSupportAgentMemory",
         description="Memory for customer support conversations"
     )
-    
-    agent = create_personal_agent()
 """
 
 import datetime
@@ -42,8 +32,6 @@ import logging
 import os
 
 from bedrock_agentcore.memory import MemoryClient
-from botocore.exceptions import ClientError
-from strands import tool
 
 
 # Setup logging
@@ -61,43 +49,36 @@ memory_client = MemoryClient(region_name=region)
 
 def list_memories(memory_client: MemoryClient):
     """
-    List all memories in the memory client by printing their ARN and ID.
+    List all memories in the memory client.
     
     Args:
         memory_client: The MemoryClient instance to use
         
     Returns:
-        None
+        list: List of memory objects
     """
-    return [ memory for memory in memory_client.list_memories() ]
+    return [memory for memory in memory_client.list_memories()]
 
 
 def create_memory_if_not_exists(memory_client: MemoryClient, name: str, description: str):
     """
-    Create a new memory if one with the given name doesn't already exist.
+    Create a new memory collection.
     
     Args:
         memory_client: The MemoryClient instance to use
-        memory_name: Name for the memory
-        memory_description: Description for the memory
+        name: Name for the memory
+        description: Description for the memory
         
     Returns:
-        dict: Existing or newly created memory object, None if creation fails
+        dict: Created memory object, None if creation fails
     """
-    # # Check if memory already exists
-    # existing_memory = check_memory_exists(memory_client, name)
-    # if existing_memory:
-    #     return existing_memory
-    
-    # Create new memory if it doesn't exist
     try:
         memory = memory_client.create_memory(
-            name = name,
-            description = description
+            name=name,
+            description=description
         )
-        logger.info(f"Created new memory {memory_name} with ID: {memory.get('id')}")
+        logger.info(f"Created new memory {name} with ID: {memory.get('id')}")
         logger.info(f"Memory:\n{json.dumps(memory, indent=2)}")
-
         return memory
     except Exception as e:
         logger.error(f"Error creating memory: {str(e)}")
@@ -110,19 +91,19 @@ def create_event(memory_client: MemoryClient, memory_id: str, actor_id: str, ses
     
     Args:
         memory_client: The MemoryClient instance to use
-        memory_id (str): ID of the memory to create event in
-        actor_id (str): Identifier of the actor (agent or end-user) 
-        session_id (str): Unique ID for a particular conversation
-        messages (list): List of tuples containing (message_content, role) pairs to store
+        memory_id: ID of the memory to create event in
+        actor_id: Identifier of the actor (agent or end-user) 
+        session_id: Unique ID for a particular conversation
+        messages: List of tuples containing (message_content, role) pairs to store
         
     Returns:
         dict: Created event object containing event details
     """
     return memory_client.create_event(
-        memory_id = memory_id,
-        actor_id = actor_id,
-        session_id = session_id,
-        messages = messages,
+        memory_id=memory_id,
+        actor_id=actor_id,
+        session_id=session_id,
+        messages=messages,
     )
 
 
@@ -132,18 +113,18 @@ def list_events(memory_client: MemoryClient, memory_id: str, actor_id: str, sess
     
     Args:
         memory_client: The MemoryClient instance to use
-        memory_id (str): ID of the memory to list events from
-        actor_id (str): Identifier of the actor (agent or end-user)
-        session_id (str): Unique ID for a particular conversation
+        memory_id: ID of the memory to list events from
+        actor_id: Identifier of the actor (agent or end-user)
+        session_id: Unique ID for a particular conversation
         
     Returns:
         list: List of conversation events, limited to 5 most recent results
     """
     conversations = memory_client.list_events(
-        memory_id = memory_id,
-        actor_id = actor_id,
-        session_id = session_id,
-        max_results = 5,
+        memory_id=memory_id,
+        actor_id=actor_id,
+        session_id=session_id,
+        max_results=5,
     )
     return conversations
 
@@ -166,23 +147,24 @@ SAMPLE_CONVERSATION_HISTORY = [
 
 memory = create_memory_if_not_exists(
     memory_client,
-    name = "CustomerSupportAgentMemory",
-    description = "Memory for customer support conversations",
+    name="CustomerSupportAgentMemory",
+    description="Memory for customer support conversations",
 )
 
 
 def main():
     USER_ID = "User84"
-    SESSION_ID = f"OrderSupport-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    SESSION_ID = f"OrderSupport-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
     # List current memories
     print('-' * 80)
-    for memory in list_memories(memory_client):
-        memory_id = memory.get('id')
+    memories = list_memories(memory_client)
+    for mem in memories:
+        memory_id = mem.get('id')
         print(f"Memory ID: {memory_id}")
-        print(f"Memory Arn: {memory.get('arn')}")
-        print(f"Memory Status: {memory.get('status')}")
-        print(f"Memory created: {memory.get('createdAt')}")
+        print(f"Memory Arn: {mem.get('arn')}")
+        print(f"Memory Status: {mem.get('status')}")
+        print(f"Memory created: {mem.get('createdAt')}")
         print('-' * 80)
         
     # Create an event
@@ -191,6 +173,7 @@ def main():
     # Describe event just created
     conversations = list_events(memory_client, memory_id, USER_ID, SESSION_ID)
     print(json.dumps(conversations, indent=2, default=str))
+
 
 if __name__ == '__main__':
     main()
