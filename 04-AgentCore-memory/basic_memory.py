@@ -60,9 +60,10 @@ def list_memories(memory_client: MemoryClient):
     return [memory for memory in memory_client.list_memories()]
 
 
-def create_memory_if_not_exists(memory_client: MemoryClient, name: str, description: str):
+def create_memory_if_none_exist(memory_client: MemoryClient, name: str, description: str):
     """
-    Create a new memory collection.
+    Create a new memory collection, if none exist.
+    Otherwise return the first memory from list_memories()
     
     Args:
         memory_client: The MemoryClient instance to use
@@ -141,7 +142,7 @@ SAMPLE_CONVERSATION_HISTORY = [
     ("The package arrived damaged", "USER"),
 ]
 
-memory = create_memory_if_not_exists(
+memory = create_memory_if_none_exist(
     memory_client,
     name="CustomerSupportAgentMemory",
     description="Memory for customer support conversations",
