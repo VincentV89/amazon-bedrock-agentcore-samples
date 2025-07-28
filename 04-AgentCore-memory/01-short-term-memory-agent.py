@@ -11,13 +11,17 @@ Features:
 - Web search capabilities via DuckDuckGo
 - Memory hooks for loading/storing conversation history
 - Session-based memory management
+
+Acknowledgments - code has been adapted from:
+- https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory-getting-started.html
+- https://github.com/awslabs/amazon-bedrock-agentcore-samples/blob/main/01-tutorials/04-AgentCore-memory/01-short-term-memory/01-single-agent/with-strands-agent/personal-agent.ipynb
 """
 
 import datetime
 import logging
 import os
 
-from basic_memory import create_memory_if_none_exist
+from basic_memory import create_memory_if_none_exist, list_memories
 from bedrock_agentcore.memory import MemoryClient
 from strands import Agent, tool
 from strands.hooks import AgentInitializedEvent, HookProvider, HookRegistry, MessageAddedEvent
@@ -56,6 +60,49 @@ def websearch(keywords: str, region: str = "us-en", max_results: int = 5) -> str
         return f"Search error: {e}"
     except Exception as e:
         return f"Search error: {str(e)}"
+
+
+def create_memory_if_none_exist(memory_client: MemoryClient, name: str, description: str, event_expiry: int):
+    """
+    Create a new memory collection, if none exist.
+    Otherwise return the first memory from list_memories()
+    
+    Args:
+        memory_client: The MemoryClient instance to use
+        name (str): Name for the memory
+        description (str): Description for the memory
+        event_expiry (int): Retention period for short-term memory. This can be upto 365 days.
+        
+    Returns:
+        dict: Created memory object, None if creation fails
+    """
+    memories = list_memories(memory_client)
+    if len(memories):
+        return memories[0]  # For demo purposes, we assume that the only memory is the correct one.
+
+    try:
+        memory = memory_client.create_memory_and_wait(
+            name=name,
+            strategies=[],  # No strategies for short term memory
+            description=description,
+            event_expiry=event_expiry,
+        )
+        logger.info(f"Created new memory {name} with ID: {memory.get('id')}")
+        logger.info(f"Memory:\n{json.dumps(memory, indent=2)}")
+        return memory
+    except Exception as e:
+        # Show any errors during memory creation
+        logger.error(f"❌ ERROR creating memory: {e}")
+        import traceback
+        traceback.print_exc()
+        # Cleanup on error - delete the memory if it was partially created
+        if memory_id:
+            try:
+                client.delete_memory_and_wait(memory_id=memory_id)
+                logger.info(f"Cleaned up memory: {memory_id}")
+            except Exception as cleanup_error:
+                logger.error(f"Failed to clean up memory: {cleanup_error}")
+        return None
 
 
 class MemoryHookProvider(HookProvider):
@@ -156,14 +203,15 @@ def create_personal_agent(memory_client: MemoryClient, memory_id: str, actor_id:
 
 
 # Setup
-ACTOR_ID = "User84"
+ACTOR_ID = "User123"
 SESSION_ID = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 
 # Create memory
 memory = create_memory_if_none_exist(
     memory_client,
-    name = "CustomerSupportAgentMemory",
-    description = "Memory for customer support conversations",
+    name = "PersonalAgentMemory",
+    description = "Short-term memory for personal agent",
+    event_expiry = 30 # Retention period for short-term memory. This can be upto 365 days.
 )
 memory_id = memory.get('id')
 
